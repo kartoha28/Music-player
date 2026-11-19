@@ -39,6 +39,7 @@ export function TrackCard({
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[var(--bg-elevated)]">
         <img
+          key={track.id}
           src={track.artworkUrl}
           alt={`Обкладинка треку ${track.title}`}
           width={480}

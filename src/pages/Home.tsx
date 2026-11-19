@@ -120,6 +120,7 @@ export default function Home() {
           >
             <div className="relative w-full max-w-[240px] sm:w-56 md:w-64 aspect-square shrink-0 overflow-hidden rounded-3xl bg-[var(--bg-elevated)] shadow-2xl border border-[var(--glass-border)]">
               <img
+                key={heroTrack.id}
                 src={heroTrack.artworkUrl}
                 alt={`Обкладинка трендового треку ${heroTrack.title}`}
                 width={320}

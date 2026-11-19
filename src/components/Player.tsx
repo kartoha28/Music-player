@@ -107,6 +107,7 @@ export function Player() {
             className="relative h-13 w-13 shrink-0 overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--bg-elevated)] cursor-pointer disabled:cursor-default p-0"
           >
             <img
+              key={currentTrack?.id ?? 'desktop-idle'}
               src={currentTrack?.artworkThumbnailUrl || currentTrack?.artworkUrl || FALLBACK_ARTWORK_SVG}
               alt={currentTrack ? `Обкладинка ${currentTrack.title}` : 'Обкладинка відсутня'}
               width={52}
@@ -169,8 +170,31 @@ export function Player() {
           </div>
         </div>
 
-        {/* Центр: кнопки керування + хвиля */}
-        <div className="flex flex-col items-center gap-1.5 min-w-0">
+        {/* Центр: хвиля зверху (щоб тултіп не перекривав кнопки) + кнопки керування */}
+        <div className="flex flex-col items-center gap-1 min-w-0">
+          <div className="flex w-full items-center gap-2.5">
+            <span className="w-10 text-right text-[11px] font-medium text-[var(--text-muted)] tabular-nums">
+              {formatDuration(currentTime)}
+            </span>
+
+            <div className="flex-1 min-w-0">
+              <Waveform
+                trackId={currentTrack?.id}
+                currentTime={currentTime}
+                duration={duration}
+                isPlaying={isPlaying}
+                visualizerFallback={visualizerFallback}
+                onSeek={requestSeek}
+                variant="compact"
+                disabled={!currentTrack || duration <= 0}
+              />
+            </div>
+
+            <span className="w-10 text-[11px] font-medium text-[var(--text-muted)] tabular-nums">
+              {formatDuration(duration)}
+            </span>
+          </div>
+
           <div className="flex items-center gap-2">
             <GlassButton
               variant="ghost"
@@ -200,7 +224,7 @@ export function Player() {
             <GlassButton
               variant="primary"
               size="icon"
-              className="h-10 w-10"
+              className="h-9 w-9"
               aria-label={isPlaying ? 'Пауза (Пробіл)' : 'Відтворити (Пробіл)'}
               title={isPlaying ? 'Пауза (Пробіл)' : 'Відтворити (Пробіл)'}
               disabled={!currentTrack}
@@ -238,29 +262,6 @@ export function Player() {
             >
               <RepeatIcon className="h-4 w-4" aria-hidden="true" />
             </GlassButton>
-          </div>
-
-          <div className="flex w-full items-center gap-2.5">
-            <span className="w-10 text-right text-[11px] font-medium text-[var(--text-muted)] tabular-nums">
-              {formatDuration(currentTime)}
-            </span>
-
-            <div className="flex-1 min-w-0">
-              <Waveform
-                trackId={currentTrack?.id}
-                currentTime={currentTime}
-                duration={duration}
-                isPlaying={isPlaying}
-                visualizerFallback={visualizerFallback}
-                onSeek={requestSeek}
-                variant="compact"
-                disabled={!currentTrack || duration <= 0}
-              />
-            </div>
-
-            <span className="w-10 text-[11px] font-medium text-[var(--text-muted)] tabular-nums">
-              {formatDuration(duration)}
-            </span>
           </div>
         </div>
 
@@ -340,6 +341,7 @@ export function Player() {
             className="flex min-w-0 flex-1 items-center gap-2.5 text-left bg-transparent border-0 p-0 cursor-pointer disabled:cursor-default"
           >
             <img
+              key={currentTrack?.id ?? 'mobile-idle'}
               src={currentTrack?.artworkThumbnailUrl || currentTrack?.artworkUrl || FALLBACK_ARTWORK_SVG}
               alt=""
               width={44}
@@ -448,6 +450,7 @@ export function Player() {
             <div className="mx-auto my-auto w-full max-w-xl py-6 flex flex-col items-center gap-6">
               <div className="w-full max-w-[290px] sm:max-w-[340px] aspect-square overflow-hidden rounded-3xl border border-[var(--glass-border)] bg-[var(--bg-elevated)] shadow-2xl">
                 <img
+                  key={currentTrack.id}
                   src={currentTrack.artworkUrl || FALLBACK_ARTWORK_SVG}
                   alt={`Обкладинка ${currentTrack.title}`}
                   width={360}
