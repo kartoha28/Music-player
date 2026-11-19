@@ -141,7 +141,7 @@ export function StageNotice({ message }: StageNoticeProps) {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-24 lg:bottom-6 right-4 left-4 sm:left-auto sm:max-w-md z-50 pointer-events-none"
+      className="fixed bottom-[calc(var(--mobile-nav-height)+var(--player-bar-height)+0.75rem)] lg:bottom-[calc(var(--player-bar-height)+1.75rem)] right-4 left-4 sm:left-auto sm:max-w-md z-50 pointer-events-none"
     >
       <div className="glass-panel-strong px-4 py-3 text-sm font-medium text-[var(--text-primary)] shadow-2xl border border-[var(--glass-border)]">
         {message}

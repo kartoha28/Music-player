@@ -1,4 +1,4 @@
-import { Headphones, Pause, Play } from 'lucide-react';
+import { Headphones, ListPlus, ListStart, Pause, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Track } from '../providers/types';
 import { formatCount, formatDuration, handleArtworkError } from '../utils/format';
@@ -7,6 +7,8 @@ import { GlassCard } from './GlassCard';
 export interface TrackCardProps {
   track: Track;
   onPlay?: (track: Track) => void;
+  onPlayNext?: (track: Track) => void;
+  onAddToQueue?: (track: Track) => void;
   isActive?: boolean;
   isPlaying?: boolean;
   priority?: boolean;
@@ -16,6 +18,8 @@ export interface TrackCardProps {
 export function TrackCard({
   track,
   onPlay,
+  onPlayNext,
+  onAddToQueue,
   isActive = false,
   isPlaying = false,
   priority = false,
@@ -45,6 +49,33 @@ export function TrackCard({
           onError={(event) => handleArtworkError(event, track.artworkMirrors)}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
         />
+
+        {(onPlayNext || onAddToQueue) && (
+          <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity duration-150">
+            {onPlayNext && (
+              <button
+                type="button"
+                onClick={() => onPlayNext(track)}
+                title="Грати наступним"
+                aria-label={`Грати наступним: ${track.title}`}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white border border-white/25 backdrop-blur-md hover:bg-[var(--accent)] transition-colors cursor-pointer"
+              >
+                <ListStart className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+            {onAddToQueue && (
+              <button
+                type="button"
+                onClick={() => onAddToQueue(track)}
+                title="Додати в чергу"
+                aria-label={`Додати в чергу: ${track.title}`}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white border border-white/25 backdrop-blur-md hover:bg-[var(--accent)] transition-colors cursor-pointer"
+              >
+                <ListPlus className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        )}
 
         <div
           aria-hidden="true"

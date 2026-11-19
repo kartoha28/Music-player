@@ -1,4 +1,4 @@
-import { Headphones, Pause, Play } from 'lucide-react';
+import { Headphones, ListPlus, ListStart, Pause, Play } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { Track } from '../providers/types';
@@ -8,6 +8,8 @@ export interface TrackRowProps {
   track: Track;
   index?: number;
   onPlay?: (track: Track) => void;
+  onPlayNext?: (track: Track) => void;
+  onAddToQueue?: (track: Track) => void;
   isActive?: boolean;
   isPlaying?: boolean;
   actions?: ReactNode;
@@ -24,6 +26,8 @@ export function TrackRow({
   track,
   index,
   onPlay,
+  onPlayNext,
+  onAddToQueue,
   isActive = false,
   isPlaying = false,
   actions,
@@ -83,7 +87,9 @@ export function TrackRow({
         <button
           type="button"
           onClick={() => onPlay?.(track)}
-          className="block w-full text-left text-sm font-semibold text-[var(--text-primary)] truncate hover:text-[var(--accent)] transition-colors cursor-pointer bg-transparent border-0 p-0"
+          className={`block w-full text-left text-sm font-semibold truncate hover:text-[var(--accent)] transition-colors cursor-pointer bg-transparent border-0 p-0 ${
+            isActive ? 'text-[var(--accent)]' : 'text-[var(--text-primary)]'
+          }`}
           title={track.title}
         >
           {track.title}
@@ -114,7 +120,7 @@ export function TrackRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
         {track.playCount !== undefined && (
           <span className="hidden md:inline-flex items-center gap-1 text-xs text-[var(--text-muted)] tabular-nums">
             <Headphones className="h-3.5 w-3.5" aria-hidden="true" />
@@ -126,9 +132,33 @@ export function TrackRow({
           {SOURCE_LABELS[track.source]}
         </span>
 
-        <span className="text-xs font-medium text-[var(--text-secondary)] tabular-nums min-w-[2.75rem] text-right">
+        <span className="text-xs font-medium text-[var(--text-secondary)] tabular-nums min-w-[2.5rem] text-right">
           {formatDuration(track.duration)}
         </span>
+
+        {onPlayNext && (
+          <button
+            type="button"
+            onClick={() => onPlayNext(track)}
+            title="Грати наступним"
+            aria-label={`Грати наступним: ${track.title}`}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--glass-bg)] hover:text-[var(--text-primary)] transition-colors cursor-pointer bg-transparent border-0"
+          >
+            <ListStart className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+
+        {onAddToQueue && (
+          <button
+            type="button"
+            onClick={() => onAddToQueue(track)}
+            title="Додати в чергу"
+            aria-label={`Додати в чергу: ${track.title}`}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--glass-bg)] hover:text-[var(--text-primary)] transition-colors cursor-pointer bg-transparent border-0"
+          >
+            <ListPlus className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
 
         {actions && <div className="flex items-center gap-1">{actions}</div>}
       </div>

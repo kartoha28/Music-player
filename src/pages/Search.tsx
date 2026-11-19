@@ -14,6 +14,7 @@ import {
 import { TrackRow } from '../components/TrackRow';
 import { useDebounce } from '../hooks/useDebounce';
 import { getDefaultProvider, type SearchResults, type Track } from '../providers';
+import { selectCurrentTrack, usePlayerStore } from '../store/playerStore';
 import { formatCountWithUnit, handleArtworkError } from '../utils/format';
 
 type SearchTab = 'tracks' | 'artists' | 'playlists';
@@ -60,9 +61,15 @@ export default function Search() {
   const [retryTick, setRetryTick] = useState<number>(0);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const currentTrack = usePlayerStore(selectCurrentTrack);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const playTrack = usePlayerStore((s) => s.playTrack);
+  const playNext = usePlayerStore((s) => s.playNext);
+  const addToQueue = usePlayerStore((s) => s.addToQueue);
+
   useEffect(() => {
     if (!notice) return;
-    const timer = setTimeout(() => setNotice(null), 3000);
+    const timer = setTimeout(() => setNotice(null), 2600);
     return () => clearTimeout(timer);
   }, [notice]);
 
@@ -131,8 +138,14 @@ export default function Search() {
     setRetryTick((tick) => tick + 1);
   };
 
-  const handlePlayPreview = (track: Track) => {
-    setNotice(`«${track.title}» — відтворення в плеєрі буде підключено на Етапі 3.`);
+  const handlePlayNext = (track: Track) => {
+    playNext(track);
+    setNotice(`«${track.title}» гратиме наступним.`);
+  };
+
+  const handleAddToQueue = (track: Track) => {
+    addToQueue(track);
+    setNotice(`«${track.title}» додано в чергу.`);
   };
 
   const trimmedDebounced = debouncedQuery.trim();
@@ -254,7 +267,11 @@ export default function Search() {
                         key={track.id}
                         track={track}
                         index={index}
-                        onPlay={handlePlayPreview}
+                        isActive={currentTrack?.id === track.id}
+                        isPlaying={isPlaying}
+                        onPlay={(selected) => playTrack(selected, results.tracks)}
+                        onPlayNext={handlePlayNext}
+                        onAddToQueue={handleAddToQueue}
                       />
                     ))}
                   </div>

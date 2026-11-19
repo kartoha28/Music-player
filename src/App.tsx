@@ -2,6 +2,7 @@ import { MotionConfig } from 'framer-motion';
 import { Suspense, lazy, useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AmbientBackground } from './components/AmbientBackground';
+import { Player } from './components/Player';
 import { Sidebar } from './components/Sidebar';
 import { PageSkeleton } from './components/Skeleton';
 
@@ -61,7 +62,7 @@ export default function App() {
           <main
             id="main-content"
             tabIndex={-1}
-            className="min-h-screen px-4 pt-5 pb-[calc(var(--mobile-nav-height)+2rem)] sm:px-6 lg:pl-[calc(var(--sidebar-width)+2.5rem)] lg:pr-8 lg:py-8"
+            className="min-h-screen px-4 pt-5 pb-[calc(var(--mobile-nav-height)+var(--player-bar-height)+2rem)] sm:px-6 lg:pl-[calc(var(--sidebar-width)+2.5rem)] lg:pr-8 lg:pt-8 lg:pb-[calc(var(--player-bar-height)+2.5rem)]"
           >
             <div className="mx-auto max-w-6xl">
               <Suspense fallback={<PageSkeleton />}>
@@ -77,6 +78,8 @@ export default function App() {
               </Suspense>
             </div>
           </main>
+
+          <Player />
         </div>
       </HashRouter>
     </MotionConfig>

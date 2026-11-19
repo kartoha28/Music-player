@@ -1,4 +1,4 @@
-import { Clock, ExternalLink, Flame, Headphones, Play, RefreshCw, Sparkles } from 'lucide-react';
+import { Clock, ExternalLink, Flame, Headphones, Pause, Play, RefreshCw, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GlassButton } from '../components/GlassButton';
@@ -12,31 +12,8 @@ import {
 } from '../components/Skeleton';
 import { TrackCard } from '../components/TrackCard';
 import { AUDIUS_GENRES, getDefaultProvider, type Track } from '../providers';
+import { selectCurrentTrack, usePlayerStore } from '../store/playerStore';
 import { formatCountWithUnit, formatDuration, handleArtworkError } from '../utils/format';
-
-function readRecentlyPlayed(): Track[] {
-  try {
-    const raw = localStorage.getItem('wave-player');
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as {
-      recentlyPlayed?: unknown;
-      state?: { recentlyPlayed?: unknown };
-    };
-    const list = parsed.state?.recentlyPlayed ?? parsed.recentlyPlayed;
-    if (!Array.isArray(list)) return [];
-    return list.filter(
-      (item): item is Track =>
-        Boolean(
-          item &&
-            typeof item === 'object' &&
-            typeof (item as Track).id === 'string' &&
-            typeof (item as Track).title === 'string',
-        ),
-    );
-  } catch {
-    return [];
-  }
-}
 
 function isAbortError(error: unknown): boolean {
   return (
@@ -52,16 +29,18 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState<number>(0);
-  const [recentlyPlayed, setRecentlyPlayed] = useState<Track[]>(readRecentlyPlayed);
   const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    setRecentlyPlayed(readRecentlyPlayed());
-  }, []);
+  const currentTrack = usePlayerStore(selectCurrentTrack);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const recentlyPlayed = usePlayerStore((s) => s.recentlyPlayed);
+  const playTrack = usePlayerStore((s) => s.playTrack);
+  const playNext = usePlayerStore((s) => s.playNext);
+  const addToQueue = usePlayerStore((s) => s.addToQueue);
 
   useEffect(() => {
     if (!notice) return;
-    const timer = setTimeout(() => setNotice(null), 3000);
+    const timer = setTimeout(() => setNotice(null), 2600);
     return () => clearTimeout(timer);
   }, [notice]);
 
@@ -113,12 +92,19 @@ export default function Home() {
     setReloadTick((tick) => tick + 1);
   };
 
-  const handlePlayPreview = (track: Track) => {
-    setNotice(`«${track.title}» — відтворення в плеєрі буде підключено на Етапі 3.`);
+  const handlePlayNext = (track: Track) => {
+    playNext(track);
+    setNotice(`«${track.title}» гратиме наступним.`);
+  };
+
+  const handleAddToQueue = (track: Track) => {
+    addToQueue(track);
+    setNotice(`«${track.title}» додано в чергу.`);
   };
 
   const activeGenreLabel =
     AUDIUS_GENRES.find((genre) => genre.value === selectedGenre)?.label ?? 'Усі';
+  const isHeroActive = Boolean(heroTrack && currentTrack?.id === heroTrack.id);
 
   return (
     <div className="space-y-8">
@@ -204,10 +190,21 @@ export default function Home() {
                 <GlassButton
                   variant="primary"
                   size="lg"
-                  onClick={() => handlePlayPreview(heroTrack)}
+                  onClick={() =>
+                    playTrack(heroTrack, tracks.length > 0 ? tracks : [heroTrack])
+                  }
                 >
-                  <Play className="h-4 w-4 fill-current" aria-hidden="true" />
-                  <span>Слухати</span>
+                  {isHeroActive && isPlaying ? (
+                    <>
+                      <Pause className="h-4 w-4 fill-current" aria-hidden="true" />
+                      <span>Пауза</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 fill-current" aria-hidden="true" />
+                      <span>Слухати</span>
+                    </>
+                  )}
                 </GlassButton>
 
                 <a
@@ -320,7 +317,11 @@ export default function Home() {
                 key={track.id}
                 track={track}
                 priority={idx < 2}
-                onPlay={handlePlayPreview}
+                isActive={currentTrack?.id === track.id}
+                isPlaying={isPlaying}
+                onPlay={(selected) => playTrack(selected, tracks)}
+                onPlayNext={handlePlayNext}
+                onAddToQueue={handleAddToQueue}
               />
             ))}
           </div>
@@ -342,7 +343,11 @@ export default function Home() {
               <TrackCard
                 key={track.id}
                 track={track}
-                onPlay={handlePlayPreview}
+                isActive={currentTrack?.id === track.id}
+                isPlaying={isPlaying}
+                onPlay={(selected) => playTrack(selected, recentlyPlayed)}
+                onPlayNext={handlePlayNext}
+                onAddToQueue={handleAddToQueue}
                 className="w-[210px] sm:w-[230px] shrink-0"
               />
             ))}
