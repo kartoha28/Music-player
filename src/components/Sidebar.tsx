@@ -1,5 +1,7 @@
-import { AudioLines, Home, Library, Search, Settings } from 'lucide-react';
+import { AudioLines, Home, Library, Link2, Search, Settings } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { usePlayerStore } from '../store/playerStore';
+import { GlassButton } from './GlassButton';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Головна', icon: Home, end: true },
@@ -9,6 +11,8 @@ const NAV_ITEMS = [
 ] as const;
 
 export function Sidebar() {
+  const openSoundCloudModal = usePlayerStore((s) => s.openSoundCloudModal);
+
   return (
     <>
       {/* Бокова скляна навігація для десктопу */}
@@ -65,11 +69,23 @@ export function Sidebar() {
           ))}
         </nav>
 
-        <div className="mt-auto rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] p-3.5 text-xs text-[var(--text-secondary)]">
-          <p className="m-0 font-semibold text-[var(--text-primary)]">Лише легальні джерела</p>
-          <p className="mt-1 mb-0 leading-relaxed text-[var(--text-muted)]">
-            Audius Open API та офіційний вбудований плеєр SoundCloud.
-          </p>
+        <div className="mt-auto space-y-3">
+          <GlassButton
+            variant="glass"
+            size="md"
+            className="w-full justify-start"
+            onClick={() => openSoundCloudModal()}
+          >
+            <Link2 className="h-4 w-4 text-[var(--accent)] shrink-0" aria-hidden="true" />
+            <span>Додати SoundCloud</span>
+          </GlassButton>
+
+          <div className="rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] p-3.5 text-xs text-[var(--text-secondary)]">
+            <p className="m-0 font-semibold text-[var(--text-primary)]">Лише легальні джерела</p>
+            <p className="mt-1 mb-0 leading-relaxed text-[var(--text-muted)]">
+              Audius Open API та офіційний вбудований плеєр SoundCloud.
+            </p>
+          </div>
         </div>
       </aside>
 

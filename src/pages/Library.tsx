@@ -1,4 +1,4 @@
-import { Check, Disc3, Heart, ListMusic, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
+import { Check, Disc3, Heart, Link2, ListMusic, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { GlassButton } from '../components/GlassButton';
@@ -38,6 +38,7 @@ export default function Library() {
   const playTrack = usePlayerStore((s) => s.playTrack);
   const playNext = usePlayerStore((s) => s.playNext);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
+  const openSoundCloudModal = usePlayerStore((s) => s.openSoundCloudModal);
 
   useEffect(() => {
     if (!notice) return;
@@ -75,13 +76,24 @@ export default function Library() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
-          Бібліотека
-        </h1>
-        <p className="text-sm sm:text-base text-[var(--text-secondary)]">
-          Вподобані треки та власні плейлисти, збережені локально у вашому браузері.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+            Бібліотека
+          </h1>
+          <p className="text-sm sm:text-base text-[var(--text-secondary)]">
+            Вподобані треки та власні плейлисти, збережені локально у вашому браузері.
+          </p>
+        </div>
+
+        <GlassButton
+          variant="glass"
+          size="md"
+          onClick={() => openSoundCloudModal()}
+        >
+          <Link2 className="h-4 w-4 text-[var(--accent)]" aria-hidden="true" />
+          <span>Додати з SoundCloud</span>
+        </GlassButton>
       </header>
 
       <div

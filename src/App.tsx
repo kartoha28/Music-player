@@ -6,6 +6,7 @@ import { Player } from './components/Player';
 import { PlaylistPickerModal } from './components/PlaylistPickerModal';
 import { Sidebar } from './components/Sidebar';
 import { PageSkeleton } from './components/Skeleton';
+import { SoundCloudModal } from './components/SoundCloudModal';
 import { applySettingsToDom, useSettingsStore } from './store/settingsStore';
 
 const HomePage = lazy(() => import('./pages/Home'));
@@ -68,6 +69,7 @@ export default function App() {
 
           <Player />
           <PlaylistPickerModal />
+          <SoundCloudModal />
         </div>
       </HashRouter>
     </MotionConfig>

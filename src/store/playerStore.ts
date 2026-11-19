@@ -39,6 +39,8 @@ interface PlayerState {
   recentlyPlayed: Track[];
   isQueueOpen: boolean;
   isExpanded: boolean;
+  isSoundCloudModalOpen: boolean;
+  soundCloudInitialUrl: string;
   visualizerFallback: boolean;
   seekRequest: SeekRequest | null;
   pendingRestorePosition: number | null;
@@ -60,11 +62,14 @@ interface PlayerState {
   cycleRepeatMode: () => void;
   requestSeek: (time: number) => void;
   setPlaybackMetrics: (patch: PlaybackMetricsPatch) => void;
+  updateTrackDuration: (trackId: string, durationSeconds: number) => void;
   commitSavedPosition: (time: number) => void;
   clearPendingRestore: () => void;
   setQueueOpen: (open: boolean) => void;
   toggleQueue: () => void;
   setExpanded: (expanded: boolean) => void;
+  openSoundCloudModal: (initialUrl?: string) => void;
+  closeSoundCloudModal: () => void;
 }
 
 let uidCounter = 0;
@@ -112,6 +117,8 @@ export const usePlayerStore = create<PlayerState>()(
       recentlyPlayed: [],
       isQueueOpen: false,
       isExpanded: false,
+      isSoundCloudModalOpen: false,
+      soundCloudInitialUrl: '',
       visualizerFallback: false,
       seekRequest: null,
       pendingRestorePosition: null,
@@ -143,6 +150,7 @@ export const usePlayerStore = create<PlayerState>()(
             currentTime: 0,
             savedPosition: 0,
             duration: track.duration || 0,
+            seekRequest: null,
             pendingRestorePosition: null,
             recentlyPlayed: pushRecentlyPlayed(state.recentlyPlayed, track),
           });
@@ -159,6 +167,7 @@ export const usePlayerStore = create<PlayerState>()(
             currentTime: 0,
             savedPosition: 0,
             duration: track.duration || 0,
+            seekRequest: null,
             pendingRestorePosition: null,
             recentlyPlayed: pushRecentlyPlayed(state.recentlyPlayed, track),
           });
@@ -202,6 +211,7 @@ export const usePlayerStore = create<PlayerState>()(
           currentTime: 0,
           savedPosition: 0,
           duration: target.duration || 0,
+          seekRequest: null,
           pendingRestorePosition: null,
           recentlyPlayed: pushRecentlyPlayed(state.recentlyPlayed, target),
         });
@@ -266,6 +276,7 @@ export const usePlayerStore = create<PlayerState>()(
           currentTime: 0,
           savedPosition: 0,
           duration: nextTrack.duration || 0,
+          seekRequest: null,
           pendingRestorePosition: null,
           recentlyPlayed: pushRecentlyPlayed(state.recentlyPlayed, nextTrack),
         });
@@ -299,6 +310,7 @@ export const usePlayerStore = create<PlayerState>()(
           currentTime: 0,
           savedPosition: 0,
           duration: prevTrack.duration || 0,
+          seekRequest: null,
           pendingRestorePosition: null,
           recentlyPlayed: pushRecentlyPlayed(state.recentlyPlayed, prevTrack),
         });
@@ -331,6 +343,7 @@ export const usePlayerStore = create<PlayerState>()(
             currentTime: 0,
             savedPosition: 0,
             duration: track.duration || 0,
+            seekRequest: null,
             pendingRestorePosition: null,
             recentlyPlayed: pushRecentlyPlayed(state.recentlyPlayed, track),
           });
@@ -379,6 +392,7 @@ export const usePlayerStore = create<PlayerState>()(
             currentTime: 0,
             savedPosition: 0,
             duration: nextTrack.duration || 0,
+            seekRequest: null,
             pendingRestorePosition: null,
             playbackError: null,
             recentlyPlayed: state.isPlaying
@@ -432,6 +446,7 @@ export const usePlayerStore = create<PlayerState>()(
           currentTime: 0,
           savedPosition: 0,
           duration: 0,
+          seekRequest: null,
           playbackError: null,
           pendingRestorePosition: null,
         });
@@ -499,6 +514,34 @@ export const usePlayerStore = create<PlayerState>()(
         }));
       },
 
+      updateTrackDuration: (trackId, durationSeconds) => {
+        if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return;
+        const current = get();
+        const needsUpdate =
+          current.queue.some(
+            (item) =>
+              item.track.id === trackId &&
+              Math.abs((item.track.duration || 0) - durationSeconds) >= 0.5,
+          ) ||
+          current.recentlyPlayed.some(
+            (track) =>
+              track.id === trackId &&
+              Math.abs((track.duration || 0) - durationSeconds) >= 0.5,
+          );
+        if (!needsUpdate) return;
+
+        set((state) => ({
+          queue: state.queue.map((item) =>
+            item.track.id === trackId
+              ? { ...item, track: { ...item.track, duration: durationSeconds } }
+              : item,
+          ),
+          recentlyPlayed: state.recentlyPlayed.map((track) =>
+            track.id === trackId ? { ...track, duration: durationSeconds } : track,
+          ),
+        }));
+      },
+
       commitSavedPosition: (time) => {
         const state = get();
         const maxDuration = state.duration > 0 ? state.duration : time;
@@ -519,6 +562,20 @@ export const usePlayerStore = create<PlayerState>()(
 
       setExpanded: (expanded) => {
         set({ isExpanded: expanded });
+      },
+
+      openSoundCloudModal: (initialUrl = '') => {
+        set({
+          isSoundCloudModalOpen: true,
+          soundCloudInitialUrl: initialUrl,
+        });
+      },
+
+      closeSoundCloudModal: () => {
+        set({
+          isSoundCloudModalOpen: false,
+          soundCloudInitialUrl: '',
+        });
       },
     }),
     {

@@ -1,4 +1,4 @@
-import { BadgeCheck, Disc3, Music2, Search as SearchIcon, Sparkles, UserRound } from 'lucide-react';
+import { BadgeCheck, Disc3, Link2, Music2, Search as SearchIcon, Sparkles, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { GlassButton } from '../components/GlassButton';
@@ -13,7 +13,7 @@ import {
 } from '../components/Skeleton';
 import { TrackRow } from '../components/TrackRow';
 import { useDebounce } from '../hooks/useDebounce';
-import { getDefaultProvider, type SearchResults, type Track } from '../providers';
+import { getDefaultProvider, isSoundCloudUrl, type SearchResults, type Track } from '../providers';
 import { selectCurrentTrack, usePlayerStore } from '../store/playerStore';
 import { formatCountWithUnit, handleArtworkError } from '../utils/format';
 
@@ -66,6 +66,9 @@ export default function Search() {
   const playTrack = usePlayerStore((s) => s.playTrack);
   const playNext = usePlayerStore((s) => s.playNext);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
+  const openSoundCloudModal = usePlayerStore((s) => s.openSoundCloudModal);
+
+  const isScLink = isSoundCloudUrl(query);
 
   useEffect(() => {
     if (!notice) return;
@@ -90,7 +93,7 @@ export default function Search() {
 
   useEffect(() => {
     const trimmed = debouncedQuery.trim();
-    if (!trimmed) {
+    if (!trimmed || isSoundCloudUrl(trimmed)) {
       setResults(EMPTY_RESULTS);
       setIsLoading(false);
       setError(null);
@@ -158,16 +161,51 @@ export default function Search() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">Пошук</h1>
-        <p className="text-sm sm:text-base text-[var(--text-secondary)]">
-          Миттєвий пошук треків, артистів і плейлистів у каталозі Audius.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">Пошук</h1>
+          <p className="text-sm sm:text-base text-[var(--text-secondary)]">
+            Миттєвий пошук треків, артистів і плейлистів у каталозі Audius.
+          </p>
+        </div>
+
+        <GlassButton
+          variant="glass"
+          size="md"
+          onClick={() => openSoundCloudModal()}
+        >
+          <Link2 className="h-4 w-4 text-[var(--accent)]" aria-hidden="true" />
+          <span>Вставити посилання SoundCloud</span>
+        </GlassButton>
       </header>
 
       <SearchBar value={query} onChange={setQuery} isLoading={isLoading} />
 
-      {!trimmedDebounced ? (
+      {isScLink ? (
+        <GlassCard radius="xl" className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)]">
+              <Link2 className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="space-y-1">
+              <h2 className="m-0 text-lg font-semibold text-[var(--text-primary)]">
+                Виявлено посилання SoundCloud
+              </h2>
+              <p className="m-0 text-sm text-[var(--text-secondary)]">
+                Відкрийте цей трек у вбудованому режимі SoundCloud через oEmbed.
+              </p>
+            </div>
+          </div>
+
+          <GlassButton
+            variant="primary"
+            size="md"
+            onClick={() => openSoundCloudModal(query.trim())}
+          >
+            <span>Відкрити у вбудованому плеєрі</span>
+          </GlassButton>
+        </GlassCard>
+      ) : !trimmedDebounced ? (
         <GlassCard radius="xl" className="p-6 sm:p-8 space-y-4">
           <div className="flex items-center gap-2.5 text-[var(--text-primary)]">
             <Sparkles className="h-5 w-5 text-[var(--accent)]" aria-hidden="true" />

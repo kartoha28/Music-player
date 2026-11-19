@@ -47,7 +47,8 @@ const REPEAT_LABELS: Record<RepeatMode, string> = {
 };
 
 export function Player() {
-  useAudio();
+  const scIframeRef = useRef<HTMLIFrameElement | null>(null);
+  useAudio(scIframeRef);
   useMediaSession();
   useHotkeys();
 
@@ -782,6 +783,35 @@ export function Player() {
       </AnimatePresence>
 
       <QueuePanel />
+
+      {currentTrack?.source === 'soundcloud' && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            right: 0,
+            width: '1px',
+            height: '1px',
+            opacity: 0.001,
+            pointerEvents: 'none',
+            overflow: 'hidden',
+            zIndex: -1,
+          }}
+        >
+          <iframe
+            key={currentTrack.id}
+            ref={scIframeRef}
+            src={currentTrack.embedSrc || undefined}
+            title="Вбудований плеєр SoundCloud"
+            width={300}
+            height={166}
+            allow="autoplay; encrypted-media"
+            tabIndex={-1}
+            style={{ border: 0 }}
+          />
+        </div>
+      )}
     </>
   );
 }
