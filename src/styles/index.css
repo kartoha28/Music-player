@@ -90,3 +90,10 @@
 .horizontal-scroller > * {
   scroll-snap-align: start;
 }
+
+/* Приховуємо нативний хрестик пошуку на користь власної скляної кнопки */
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}

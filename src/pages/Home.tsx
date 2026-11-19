@@ -1,121 +1,362 @@
-import { Disc3, Library, Search, Settings, Sparkles, UserRound } from 'lucide-react';
+import { Clock, ExternalLink, Flame, Headphones, Play, RefreshCw, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GlassButton } from '../components/GlassButton';
 import { GlassCard } from '../components/GlassCard';
+import {
+  EmptyState,
+  ErrorState,
+  HeroSkeleton,
+  StageNotice,
+  TrackCardSkeleton,
+} from '../components/Skeleton';
+import { TrackCard } from '../components/TrackCard';
+import { AUDIUS_GENRES, getDefaultProvider, type Track } from '../providers';
+import { formatCountWithUnit, formatDuration, handleArtworkError } from '../utils/format';
 
-const QUICK_LINKS = [
-  {
-    to: '/search',
-    title: 'Пошук музики',
-    description: 'Миттєвий пошук треків, артистів і плейлистів (Етап 2).',
-    icon: Search,
-  },
-  {
-    to: '/library',
-    title: 'Моя бібліотека',
-    description: 'Вподобані треки та власні плейлисти в localStorage (Етап 5).',
-    icon: Library,
-  },
-  {
-    to: '/settings',
-    title: 'Тема та скло',
-    description: 'Перевірте світлу й темну теми та інтенсивність Liquid Glass вже зараз.',
-    icon: Settings,
-  },
-  {
-    to: '/artist/demo',
-    title: 'Сторінка артиста',
-    description: 'Демо-маршрут /artist/:id для перевірки навігації.',
-    icon: UserRound,
-  },
-  {
-    to: '/playlist/demo',
-    title: 'Сторінка плейлиста',
-    description: 'Демо-маршрут /playlist/:id для перевірки навігації.',
-    icon: Disc3,
-  },
-] as const;
+function readRecentlyPlayed(): Track[] {
+  try {
+    const raw = localStorage.getItem('wave-player');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as {
+      recentlyPlayed?: unknown;
+      state?: { recentlyPlayed?: unknown };
+    };
+    const list = parsed.state?.recentlyPlayed ?? parsed.recentlyPlayed;
+    if (!Array.isArray(list)) return [];
+    return list.filter(
+      (item): item is Track =>
+        Boolean(
+          item &&
+            typeof item === 'object' &&
+            typeof (item as Track).id === 'string' &&
+            typeof (item as Track).title === 'string',
+        ),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    (error instanceof Error && error.name === 'AbortError')
+  );
+}
 
 export default function Home() {
+  const [selectedGenre, setSelectedGenre] = useState<string>('');
+  const [heroTrack, setHeroTrack] = useState<Track | null>(null);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState<number>(0);
+  const [recentlyPlayed, setRecentlyPlayed] = useState<Track[]>(readRecentlyPlayed);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRecentlyPlayed(readRecentlyPlayed());
+  }, []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const provider = getDefaultProvider();
+
+    setIsLoading(true);
+    setError(null);
+
+    const loadTrending = async () => {
+      try {
+        const list = await provider.getTrending(selectedGenre || undefined, controller.signal);
+        if (controller.signal.aborted) return;
+
+        setTracks(list);
+
+        if (!selectedGenre) {
+          setHeroTrack(list[0] ?? null);
+        } else if (!heroTrack) {
+          const allTrending = await provider.getTrending(undefined, controller.signal);
+          if (!controller.signal.aborted) {
+            setHeroTrack(allTrending[0] ?? list[0] ?? null);
+          }
+        }
+      } catch (err) {
+        if (isAbortError(err)) return;
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : 'Не вдалося завантажити трендові треки з Audius.',
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadTrending();
+
+    return () => {
+      controller.abort();
+    };
+  }, [selectedGenre, reloadTick]);
+
+  const handleRetry = () => {
+    getDefaultProvider().clearCache?.();
+    setReloadTick((tick) => tick + 1);
+  };
+
+  const handlePlayPreview = (track: Track) => {
+    setNotice(`«${track.title}» — відтворення в плеєрі буде підключено на Етапі 3.`);
+  };
+
+  const activeGenreLabel =
+    AUDIUS_GENRES.find((genre) => genre.value === selectedGenre)?.label ?? 'Усі';
+
   return (
     <div className="space-y-8">
-      <GlassCard
-        as="section"
-        radius="xl"
-        spotlight
-        className="p-6 sm:p-10"
-        aria-labelledby="home-hero-title"
-      >
-        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-          <Sparkles className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />
-          <span>Етап 1 · Каркас застосунку</span>
-        </div>
-
-        <h1
-          id="home-hero-title"
-          className="mt-4 text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text-primary)]"
-        >
-          Хвиля — Музика у стилі Liquid Glass
-        </h1>
-
-        <p className="mt-3 max-w-2xl text-sm sm:text-base leading-relaxed text-[var(--text-secondary)]">
-          Базовий каркас проєкту розгорнуто: працюють HashRouter, ліниве завантаження сторінок,
-          адаптивна навігація, токени дизайну Liquid Glass та автоматичний деплой на GitHub Pages.
-        </p>
-
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link to="/settings" className="no-underline">
-            <GlassButton variant="primary" size="md">
-              Перевірити тему та скло
-            </GlassButton>
-          </Link>
-          <Link to="/search" className="no-underline">
-            <GlassButton variant="glass" size="md">
-              Перейти до пошуку
-            </GlassButton>
-          </Link>
-        </div>
-      </GlassCard>
-
-      <section aria-labelledby="quick-routes-heading" className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2
-            id="quick-routes-heading"
-            className="text-xl font-semibold tracking-tight text-[var(--text-primary)]"
+      {/* Герой із трендовим треком */}
+      <section aria-labelledby="hero-heading">
+        {isLoading && !heroTrack ? (
+          <HeroSkeleton />
+        ) : heroTrack ? (
+          <GlassCard
+            radius="xl"
+            spotlight
+            className="p-6 sm:p-8 lg:p-10 flex flex-col md:flex-row gap-6 md:gap-8 items-start md:items-center"
           >
-            Навігація по маршрутах
-          </h2>
-          <span className="text-xs text-[var(--text-muted)]">HashRouter</span>
-        </div>
+            <div className="relative w-full max-w-[240px] sm:w-56 md:w-64 aspect-square shrink-0 overflow-hidden rounded-3xl bg-[var(--bg-elevated)] shadow-2xl border border-[var(--glass-border)]">
+              <img
+                src={heroTrack.artworkUrl}
+                alt={`Обкладинка трендового треку ${heroTrack.title}`}
+                width={320}
+                height={320}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                onError={(event) => handleArtworkError(event, heroTrack.artworkMirrors)}
+                className="h-full w-full object-cover"
+              />
+            </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {QUICK_LINKS.map(({ to, title, description, icon: Icon }) => (
-            <Link key={to} to={to} className="no-underline block group">
-              <GlassCard
-                interactive
-                spotlight
-                radius="md"
-                className="h-full p-5 flex flex-col gap-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--accent)]">
-                    <Icon className="h-5 w-5" aria-hidden="true" />
+            <div className="flex-1 min-w-0 space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-1 text-xs font-semibold text-[var(--text-primary)]">
+                  <Flame className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />
+                  Трек у тренді
+                </span>
+                {heroTrack.genre && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
+                    <Sparkles className="h-3 w-3 text-[var(--accent)]" aria-hidden="true" />
+                    {heroTrack.genre}
                   </span>
-                  <span className="text-xs font-mono text-[var(--text-muted)]">#{to}</span>
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
-                    {title}
-                  </h3>
-                  <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">
-                    {description}
-                  </p>
-                </div>
-              </GlassCard>
-            </Link>
-          ))}
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <h1
+                  id="hero-heading"
+                  className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[var(--text-primary)] line-clamp-2"
+                >
+                  {heroTrack.title}
+                </h1>
+
+                <p className="text-base sm:text-lg text-[var(--text-secondary)]">
+                  {heroTrack.artistId ? (
+                    <Link
+                      to={`/artist/${encodeURIComponent(heroTrack.artistId)}`}
+                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] no-underline hover:underline font-medium"
+                    >
+                      {heroTrack.artist}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{heroTrack.artist}</span>
+                  )}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-[var(--text-muted)]">
+                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                  <Clock className="h-4 w-4" aria-hidden="true" />
+                  {formatDuration(heroTrack.duration)}
+                </span>
+                {heroTrack.playCount !== undefined && (
+                  <span className="inline-flex items-center gap-1.5 tabular-nums">
+                    <Headphones className="h-4 w-4" aria-hidden="true" />
+                    {formatCountWithUnit(
+                      heroTrack.playCount,
+                      'прослуховування',
+                      'прослуховування',
+                      'прослуховувань',
+                    )}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <GlassButton
+                  variant="primary"
+                  size="lg"
+                  onClick={() => handlePlayPreview(heroTrack)}
+                >
+                  <Play className="h-4 w-4 fill-current" aria-hidden="true" />
+                  <span>Слухати</span>
+                </GlassButton>
+
+                <a
+                  href={heroTrack.permalinkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="no-underline"
+                >
+                  <GlassButton variant="glass" size="lg">
+                    <span>Відкрити на Audius</span>
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  </GlassButton>
+                </a>
+              </div>
+            </div>
+          </GlassCard>
+        ) : (
+          <GlassCard radius="xl" className="p-6 sm:p-8 space-y-2">
+            <h1 id="hero-heading" className="text-3xl font-bold tracking-tight">
+              Хвиля — Музика у стилі Liquid Glass
+            </h1>
+            <p className="text-sm sm:text-base text-[var(--text-secondary)]">
+              Відкривайте нові треки з Audius без реклами та зайвого шуму.
+            </p>
+          </GlassCard>
+        )}
+      </section>
+
+      {/* Жанри */}
+      <section aria-labelledby="genres-heading" className="space-y-3">
+        <h2
+          id="genres-heading"
+          className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--text-primary)]"
+        >
+          Жанри
+        </h2>
+
+        <div
+          role="group"
+          aria-label="Фільтр за жанром"
+          className="horizontal-scroller"
+        >
+          {AUDIUS_GENRES.map((genre) => {
+            const active = selectedGenre === genre.value;
+            return (
+              <GlassButton
+                key={genre.label}
+                variant={active ? 'primary' : 'glass'}
+                size="sm"
+                aria-pressed={active}
+                className="shrink-0 whitespace-nowrap"
+                onClick={() => setSelectedGenre(genre.value)}
+              >
+                {genre.label}
+              </GlassButton>
+            );
+          })}
         </div>
       </section>
+
+      {/* У тренді */}
+      <section aria-labelledby="trending-heading" className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2
+            id="trending-heading"
+            className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--text-primary)]"
+          >
+            У тренді{selectedGenre ? ` · ${activeGenreLabel}` : ''}
+          </h2>
+
+          <GlassButton
+            variant="ghost"
+            size="sm"
+            onClick={handleRetry}
+            aria-label="Оновити трендові треки"
+            disabled={isLoading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isLoading ? 'motion-safe:animate-spin' : ''}`}
+              aria-hidden="true"
+            />
+            <span className="hidden sm:inline">Оновити</span>
+          </GlassButton>
+        </div>
+
+        {error ? (
+          <ErrorState message={error} onRetry={handleRetry} />
+        ) : isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <TrackCardSkeleton key={idx} />
+            ))}
+          </div>
+        ) : tracks.length === 0 ? (
+          <EmptyState
+            title="Треків у цьому жанрі поки не знайдено"
+            description="Спробуйте обрати інший жанр або оновити добірку."
+            action={
+              selectedGenre ? (
+                <GlassButton variant="glass" size="sm" onClick={() => setSelectedGenre('')}>
+                  Показати всі жанри
+                </GlassButton>
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            {tracks.map((track, idx) => (
+              <TrackCard
+                key={track.id}
+                track={track}
+                priority={idx < 2}
+                onPlay={handlePlayPreview}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Нещодавно слухали */}
+      <section aria-labelledby="recent-heading" className="space-y-4">
+        <h2
+          id="recent-heading"
+          className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--text-primary)]"
+        >
+          Нещодавно слухали
+        </h2>
+
+        {recentlyPlayed.length > 0 ? (
+          <div className="horizontal-scroller">
+            {recentlyPlayed.slice(0, 12).map((track) => (
+              <TrackCard
+                key={track.id}
+                track={track}
+                onPlay={handlePlayPreview}
+                className="w-[210px] sm:w-[230px] shrink-0"
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Clock className="h-5 w-5" aria-hidden="true" />}
+            title="Історія прослуховувань порожня"
+            description="Щойно ви почнете слухати треки, вони з’являться тут для швидкого повернення."
+          />
+        )}
+      </section>
+
+      <StageNotice message={notice} />
     </div>
   );
 }
