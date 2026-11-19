@@ -1,3 +1,27 @@
+@property --ambient-1 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #ff6b35;
+}
+
+@property --ambient-2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #6366f1;
+}
+
+@property --ambient-3 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #06b6d4;
+}
+
+@property --accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #ff6b35;
+}
+
 :root {
   --in-oklab: ;
   --in-oklch: ;
@@ -48,6 +72,7 @@
   --accent-contrast: #ffffff;
   --accent-soft: rgba(255, 107, 53, 0.22);
   --duration-ambient: 600ms;
+  --glass-refract-opacity: 0.28;
 
   /* Темна тема (за замовчуванням) */
   color-scheme: dark;
@@ -68,8 +93,8 @@
   --glass-spot: rgba(255, 255, 255, 0.18);
 
   --text-primary: #f8fafc;
-  --text-secondary: rgba(241, 245, 249, 0.82);
-  --text-muted: rgba(203, 213, 225, 0.72);
+  --text-secondary: rgba(241, 245, 249, 0.84);
+  --text-muted: rgba(226, 232, 240, 0.76);
   --scrim-bottom: linear-gradient(
     to top,
     rgba(7, 10, 18, 0.86),
@@ -105,8 +130,8 @@
   --glass-spot: rgba(255, 255, 255, 0.18);
 
   --text-primary: #f8fafc;
-  --text-secondary: rgba(241, 245, 249, 0.82);
-  --text-muted: rgba(203, 213, 225, 0.72);
+  --text-secondary: rgba(241, 245, 249, 0.84);
+  --text-muted: rgba(226, 232, 240, 0.76);
   --scrim-bottom: linear-gradient(
     to top,
     rgba(7, 10, 18, 0.86),
@@ -135,8 +160,9 @@
   --glass-spot: rgba(255, 255, 255, 0.55);
 
   --text-primary: #0f172a;
-  --text-secondary: rgba(15, 23, 42, 0.78);
-  --text-muted: rgba(30, 41, 59, 0.68);
+  --text-secondary: rgba(15, 23, 42, 0.82);
+  --text-muted: rgba(30, 41, 59, 0.74);
+  --glass-refract-opacity: 0.22;
   --scrim-bottom: linear-gradient(
     to top,
     rgba(15, 23, 42, 0.82),

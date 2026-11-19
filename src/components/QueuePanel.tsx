@@ -16,7 +16,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GripVertical, ListMusic, Pause, Play, Trash2, X } from 'lucide-react';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { selectCurrentTrack, usePlayerStore, type QueueItem } from '../store/playerStore';
 import { formatCountWithUnit, formatDuration, handleArtworkError } from '../utils/format';
 import { GlassButton } from './GlassButton';
@@ -146,6 +146,19 @@ export function QueuePanel() {
   const removeFromQueue = usePlayerStore((s) => s.removeFromQueue);
   const reorderQueue = usePlayerStore((s) => s.reorderQueue);
   const clearQueue = usePlayerStore((s) => s.clearQueue);
+  const pushedHistoryRef = useRef(false);
+
+  const closeQueue = useCallback(() => {
+    const historyState = window.history.state as { waveOverlay?: string } | null;
+    if (pushedHistoryRef.current && historyState?.waveOverlay === 'queue') {
+      pushedHistoryRef.current = false;
+      setQueueOpen(false);
+      window.history.back();
+      return;
+    }
+    pushedHistoryRef.current = false;
+    setQueueOpen(false);
+  }, [setQueueOpen]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -157,15 +170,38 @@ export function QueuePanel() {
   );
 
   useEffect(() => {
-    if (!isQueueOpen) return;
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+    if (!isQueueOpen) {
+      pushedHistoryRef.current = false;
+      return;
+    }
+
+    const currentState = (window.history.state as Record<string, unknown> | null) ?? {};
+    if (currentState.waveOverlay !== 'queue') {
+      window.history.pushState({ ...currentState, waveOverlay: 'queue' }, '', window.location.href);
+      pushedHistoryRef.current = true;
+    }
+
+    const handlePopState = () => {
+      const nextState = window.history.state as { waveOverlay?: string } | null;
+      if (nextState?.waveOverlay !== 'queue') {
+        pushedHistoryRef.current = false;
         setQueueOpen(false);
       }
     };
+
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeQueue();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [isQueueOpen, setQueueOpen]);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [isQueueOpen, setQueueOpen, closeQueue]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -186,7 +222,7 @@ export function QueuePanel() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            onClick={() => setQueueOpen(false)}
+            onClick={closeQueue}
             aria-hidden="true"
             className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]"
           />
@@ -227,7 +263,7 @@ export function QueuePanel() {
                 <GlassButton
                   variant="glass"
                   size="icon"
-                  onClick={() => setQueueOpen(false)}
+                  onClick={closeQueue}
                   aria-label="Закрити чергу"
                 >
                   <X className="h-4 w-4" aria-hidden="true" />

@@ -116,6 +116,7 @@ export default function Home() {
           <GlassCard
             radius="xl"
             spotlight
+            refract
             className="p-6 sm:p-8 lg:p-10 flex flex-col md:flex-row gap-6 md:gap-8 items-start md:items-center"
           >
             <div className="relative w-full max-w-[240px] sm:w-56 md:w-64 aspect-square shrink-0 overflow-hidden rounded-3xl bg-[var(--bg-elevated)] shadow-2xl border border-[var(--glass-border)]">

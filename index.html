@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="uk" data-theme="dark" data-glass="medium">
+<html lang="uk" data-theme="dark" data-glass="medium" data-refraction="on">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -20,6 +20,7 @@
           var parsed = raw ? JSON.parse(raw) : null;
           var pref = parsed && (parsed.theme || (parsed.state && parsed.state.theme)) || 'dark';
           var glass = parsed && (parsed.glassIntensity || (parsed.state && parsed.state.glassIntensity)) || 'medium';
+          var refract = parsed && (typeof parsed.refractionEnabled === 'boolean' ? parsed.refractionEnabled : parsed.state && typeof parsed.state.refractionEnabled === 'boolean' ? parsed.state.refractionEnabled : true);
           var resolved =
             pref === 'system'
               ? window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
@@ -31,13 +32,15 @@
           document.documentElement.dataset.theme = resolved;
           document.documentElement.dataset.glass =
             glass === 'low' || glass === 'high' ? glass : 'medium';
+          document.documentElement.dataset.refraction = refract === false ? 'off' : 'on';
           var meta = document.querySelector('meta[name="theme-color"]');
           if (meta) {
-            meta.setAttribute('content', resolved === 'light' ? '#eef3fb' : '#070a12');
+            meta.setAttribute('content', resolved === 'light' ? '#e9eff8' : '#070a12');
           }
         } catch (e) {
           document.documentElement.dataset.theme = 'dark';
           document.documentElement.dataset.glass = 'medium';
+          document.documentElement.dataset.refraction = 'on';
         }
       })();
     </script>

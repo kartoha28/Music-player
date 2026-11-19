@@ -5,6 +5,7 @@ export interface GlassCardProps extends HTMLAttributes<HTMLElement> {
   as?: 'div' | 'section' | 'article' | 'aside';
   interactive?: boolean;
   spotlight?: boolean;
+  refract?: boolean;
   radius?: 'md' | 'lg' | 'xl';
 }
 
@@ -20,6 +21,7 @@ export function GlassCard({
   as = 'div',
   interactive = false,
   spotlight = false,
+  refract = false,
   radius = 'lg',
   onPointerMove,
   ...rest
@@ -40,6 +42,7 @@ export function GlassCard({
     radiusClassMap[radius],
     interactive ? 'glass-interactive' : '',
     spotlight ? 'glass-spotlight' : '',
+    refract ? 'glass-refractable' : '',
     className,
   ]
     .filter(Boolean)

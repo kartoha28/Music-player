@@ -17,9 +17,10 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useAudio } from '../hooks/useAudio';
+import { useDominantColor } from '../hooks/useDominantColor';
 import { useHotkeys } from '../hooks/useHotkeys';
 import { useMediaSession } from '../hooks/useMediaSession';
 import { selectCurrentTrack, usePlayerStore, type RepeatMode } from '../store/playerStore';
@@ -72,16 +73,103 @@ export function Player() {
   const toggleQueue = usePlayerStore((s) => s.toggleQueue);
   const setExpanded = usePlayerStore((s) => s.setExpanded);
 
+  useDominantColor(
+    currentTrack?.artworkThumbnailUrl || currentTrack?.artworkUrl,
+    currentTrack?.artworkMirrors,
+    currentTrack?.id,
+    true,
+  );
+
+  const pushedOverlayRef = useRef(false);
+  const swipeStartRef = useRef<{ y: number; time: number } | null>(null);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+
+  const closeExpanded = useCallback(() => {
+    setDragOffsetY(0);
+    setIsSwiping(false);
+    swipeStartRef.current = null;
+    const historyState = window.history.state as { waveOverlay?: string } | null;
+    if (pushedOverlayRef.current && historyState?.waveOverlay === 'player') {
+      pushedOverlayRef.current = false;
+      setExpanded(false);
+      window.history.back();
+      return;
+    }
+    pushedOverlayRef.current = false;
+    setExpanded(false);
+  }, [setExpanded]);
+
+  useEffect(() => {
+    if (!isExpanded) {
+      pushedOverlayRef.current = false;
+      setDragOffsetY(0);
+      setIsSwiping(false);
+      return;
+    }
+
+    const currentState = (window.history.state as Record<string, unknown> | null) ?? {};
+    if (currentState.waveOverlay !== 'player' && currentState.waveOverlay !== 'queue') {
+      window.history.pushState({ ...currentState, waveOverlay: 'player' }, '', window.location.href);
+      pushedOverlayRef.current = true;
+    }
+
+    const handlePopState = () => {
+      const nextState = window.history.state as { waveOverlay?: string } | null;
+      if (nextState?.waveOverlay !== 'player' && nextState?.waveOverlay !== 'queue') {
+        pushedOverlayRef.current = false;
+        setExpanded(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isExpanded, setExpanded]);
+
   useEffect(() => {
     if (!isExpanded || isQueueOpen) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setExpanded(false);
+        closeExpanded();
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [isExpanded, isQueueOpen, setExpanded]);
+  }, [isExpanded, isQueueOpen, closeExpanded]);
+
+  const handleSwipeStart = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (target?.closest('button, a, input, [role="slider"]')) return;
+    swipeStartRef.current = { y: event.clientY, time: Date.now() };
+    setIsSwiping(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleSwipeMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!swipeStartRef.current) return;
+    const delta = Math.max(0, event.clientY - swipeStartRef.current.y);
+    setDragOffsetY(delta);
+  };
+
+  const handleSwipeEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!swipeStartRef.current) return;
+    const elapsed = Math.max(1, Date.now() - swipeStartRef.current.time);
+    const delta = Math.max(0, event.clientY - swipeStartRef.current.y);
+    const velocity = delta / elapsed;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    swipeStartRef.current = null;
+    setIsSwiping(false);
+
+    if (delta > 90 || (delta > 36 && velocity > 0.45)) {
+      closeExpanded();
+    } else {
+      setDragOffsetY(0);
+    }
+  };
 
   const effectiveVolume = isMuted ? 0 : volume;
   const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
@@ -95,7 +183,7 @@ export function Player() {
       {/* Десктопна постійна скляна панель плеєра */}
       <section
         aria-label="Аудіоплеєр"
-        className="hidden lg:grid fixed bottom-4 left-[calc(var(--sidebar-width)+1.75rem)] right-6 z-40 h-[var(--player-bar-height)] px-5 glass-panel-strong grid-cols-[minmax(220px,1.05fr)_minmax(340px,1.8fr)_minmax(210px,0.9fr)] items-center gap-4"
+        className="hidden lg:grid fixed bottom-4 left-[calc(var(--sidebar-width)+1.75rem)] right-6 z-40 h-[var(--player-bar-height)] px-5 glass-panel-strong glass-refractable grid-cols-[minmax(220px,1.05fr)_minmax(340px,1.8fr)_minmax(210px,0.9fr)] items-center gap-4"
       >
         {/* Інформація про трек */}
         <div className="flex items-center gap-3 min-w-0">
@@ -319,7 +407,7 @@ export function Player() {
       {/* Мобільна компактна скляна панель плеєра */}
       <section
         aria-label="Міні-плеєр"
-        className="lg:hidden fixed left-3 right-3 bottom-[calc(var(--mobile-nav-height)+0.75rem)] z-40 glass-panel-strong overflow-hidden"
+        className="lg:hidden fixed left-3 right-3 bottom-[calc(var(--mobile-nav-height)+0.75rem)] z-40 glass-panel-strong glass-refractable overflow-hidden"
       >
         <div className="h-0.5 w-full bg-[var(--glass-border-subtle)]">
           <div
@@ -416,50 +504,71 @@ export function Player() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-            className="fixed inset-0 z-50 glass-panel-strong rounded-none overflow-y-auto px-4 py-5 sm:px-8 sm:py-7 flex flex-col"
+            style={{
+              transform: dragOffsetY > 0 ? `translateY(${dragOffsetY}px)` : undefined,
+              transition: isSwiping ? 'none' : 'transform 220ms ease-out',
+            }}
+            className="fixed inset-0 z-50 glass-panel-strong rounded-none overflow-y-auto px-4 py-4 sm:px-8 sm:py-7 flex flex-col"
           >
-            <header className="mx-auto w-full max-w-2xl flex items-center justify-between gap-3">
-              <GlassButton
-                variant="glass"
-                size="icon"
-                onClick={() => setExpanded(false)}
-                aria-label="Згорнути плеєр"
-              >
-                <ChevronDown className="h-5 w-5" aria-hidden="true" />
-              </GlassButton>
-
-              <div className="text-center">
-                <p className="m-0 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
-                  Зараз грає
-                </p>
-                <p className="m-0 text-xs font-semibold text-[var(--text-secondary)]">
-                  {SOURCE_LABELS[currentTrack.source] ?? currentTrack.source}
-                </p>
+            {/* Зона жесту свайпу вниз (ручка + шапка + обкладинка) */}
+            <div
+              onPointerDown={handleSwipeStart}
+              onPointerMove={handleSwipeMove}
+              onPointerUp={handleSwipeEnd}
+              onPointerCancel={handleSwipeEnd}
+              className="touch-pan-x"
+            >
+              <div className="mx-auto mb-3 flex justify-center lg:hidden" aria-hidden="true">
+                <span className="h-1.5 w-12 rounded-full bg-[var(--text-muted)] opacity-55" />
               </div>
 
-              <GlassButton
-                variant={isQueueOpen ? 'primary' : 'glass'}
-                size="icon"
-                onClick={toggleQueue}
-                aria-label="Відкрити чергу відтворення"
-              >
-                <ListMusic className="h-5 w-5" aria-hidden="true" />
-              </GlassButton>
-            </header>
+              <header className="mx-auto w-full max-w-2xl flex items-center justify-between gap-3">
+                <GlassButton
+                  variant="glass"
+                  size="sm"
+                  onClick={closeExpanded}
+                  aria-label="Згорнути плеєр"
+                  className="px-3 py-2"
+                >
+                  <ChevronDown className="h-5 w-5" aria-hidden="true" />
+                  <span className="text-xs sm:text-sm">Назад</span>
+                </GlassButton>
 
-            <div className="mx-auto my-auto w-full max-w-xl py-6 flex flex-col items-center gap-6">
-              <div className="w-full max-w-[290px] sm:max-w-[340px] aspect-square overflow-hidden rounded-3xl border border-[var(--glass-border)] bg-[var(--bg-elevated)] shadow-2xl">
-                <img
-                  key={currentTrack.id}
-                  src={currentTrack.artworkUrl || FALLBACK_ARTWORK_SVG}
-                  alt={`Обкладинка ${currentTrack.title}`}
-                  width={360}
-                  height={360}
-                  onError={(event) => handleArtworkError(event, currentTrack.artworkMirrors)}
-                  className="h-full w-full object-cover"
-                />
+                <div className="text-center">
+                  <p className="m-0 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                    Зараз грає
+                  </p>
+                  <p className="m-0 text-xs font-semibold text-[var(--text-secondary)]">
+                    {SOURCE_LABELS[currentTrack.source] ?? currentTrack.source}
+                  </p>
+                </div>
+
+                <GlassButton
+                  variant={isQueueOpen ? 'primary' : 'glass'}
+                  size="icon"
+                  onClick={toggleQueue}
+                  aria-label="Відкрити чергу відтворення"
+                >
+                  <ListMusic className="h-5 w-5" aria-hidden="true" />
+                </GlassButton>
+              </header>
+
+              <div className="mx-auto w-full max-w-xl pt-6 flex flex-col items-center">
+                <div className="w-full max-w-[290px] sm:max-w-[340px] aspect-square overflow-hidden rounded-3xl border border-[var(--glass-border)] bg-[var(--bg-elevated)] shadow-2xl">
+                  <img
+                    key={currentTrack.id}
+                    src={currentTrack.artworkUrl || FALLBACK_ARTWORK_SVG}
+                    alt={`Обкладинка ${currentTrack.title}`}
+                    width={360}
+                    height={360}
+                    onError={(event) => handleArtworkError(event, currentTrack.artworkMirrors)}
+                    className="h-full w-full object-cover pointer-events-none select-none"
+                  />
+                </div>
               </div>
+            </div>
 
+            <div className="mx-auto my-auto w-full max-w-xl py-5 flex flex-col items-center gap-6">
               <div className="w-full text-center space-y-1.5">
                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] line-clamp-2 m-0">
                   {currentTrack.title}
@@ -468,7 +577,10 @@ export function Player() {
                 {currentTrack.artistId ? (
                   <Link
                     to={`/artist/${encodeURIComponent(currentTrack.artistId)}`}
-                    onClick={() => setExpanded(false)}
+                    onClick={() => {
+                      pushedOverlayRef.current = false;
+                      setExpanded(false);
+                    }}
                     className="inline-block text-sm sm:text-base font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] no-underline hover:underline"
                   >
                     {currentTrack.artist}

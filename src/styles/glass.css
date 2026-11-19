@@ -98,6 +98,43 @@
     position: relative;
     z-index: 1;
   }
+
+  /* Опціональний декоративний шар світлового заломлення (не впливає на текст) */
+  .glass-refractable {
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .glass-refractable > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+html[data-refraction='on'] .glass-refractable::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 44px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--glass-refract-opacity);
+  background: linear-gradient(
+    to bottom var(--in-oklab),
+    var(--glass-highlight),
+    transparent
+  );
+  filter: url(#liquid-glass-refract);
+  z-index: 0;
+}
+
+/* Плавна інтерполяція динамічних кольорів з обкладинки треку (600 мс) */
+:root {
+  transition:
+    --ambient-1 var(--duration-ambient) ease,
+    --ambient-2 var(--duration-ambient) ease,
+    --ambient-3 var(--duration-ambient) ease,
+    --accent var(--duration-ambient) ease;
 }
 
 /* Динамічний амбієнтний фон */
@@ -250,6 +287,10 @@
     border-color: var(--glass-border-subtle);
   }
 
+  .glass-refractable::after {
+    display: none;
+  }
+
   .glass-interactive:hover {
     background: var(--bg-elevated-hover);
   }
@@ -270,5 +311,9 @@
 
   .glass-spotlight::before {
     transition: none;
+  }
+
+  .glass-refractable::after {
+    filter: none;
   }
 }
