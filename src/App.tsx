@@ -3,8 +3,10 @@ import { Suspense, lazy, useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AmbientBackground } from './components/AmbientBackground';
 import { Player } from './components/Player';
+import { PlaylistPickerModal } from './components/PlaylistPickerModal';
 import { Sidebar } from './components/Sidebar';
 import { PageSkeleton } from './components/Skeleton';
+import { applySettingsToDom, useSettingsStore } from './store/settingsStore';
 
 const HomePage = lazy(() => import('./pages/Home'));
 const SearchPage = lazy(() => import('./pages/Search'));
@@ -14,38 +16,23 @@ const LibraryPage = lazy(() => import('./pages/Library'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 
 export default function App() {
+  const theme = useSettingsStore((s) => s.theme);
+  const glassIntensity = useSettingsStore((s) => s.glassIntensity);
+  const refractionEnabled = useSettingsStore((s) => s.refractionEnabled);
+
   useEffect(() => {
+    applySettingsToDom({ theme, glassIntensity, refractionEnabled });
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
     const handleChange = () => {
-      try {
-        const raw = localStorage.getItem('wave-settings');
-        if (!raw) return;
-        const parsed = JSON.parse(raw) as {
-          theme?: 'dark' | 'light' | 'system';
-          glassIntensity?: 'low' | 'medium' | 'high';
-          state?: {
-            theme?: 'dark' | 'light' | 'system';
-            glassIntensity?: 'low' | 'medium' | 'high';
-          };
-        };
-        const src = parsed.state ?? parsed;
-        if (src.theme === 'system') {
-          const resolved = mediaQuery.matches ? 'light' : 'dark';
-          document.documentElement.dataset.theme = resolved;
-          document.documentElement.dataset.glass = src.glassIntensity ?? 'medium';
-          const meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) {
-            meta.setAttribute('content', resolved === 'light' ? '#e9eff8' : '#070a12');
-          }
-        }
-      } catch {
-        // Ігноруємо помилку читання localStorage
+      if (useSettingsStore.getState().theme === 'system') {
+        applySettingsToDom(useSettingsStore.getState());
       }
     };
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  }, [theme, glassIntensity, refractionEnabled]);
 
   return (
     <MotionConfig reducedMotion="user">
@@ -80,6 +67,7 @@ export default function App() {
           </main>
 
           <Player />
+          <PlaylistPickerModal />
         </div>
       </HashRouter>
     </MotionConfig>

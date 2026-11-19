@@ -1,6 +1,7 @@
-import { Headphones, ListPlus, ListStart, Pause, Play } from 'lucide-react';
+import { FolderPlus, Headphones, Heart, ListPlus, ListStart, Pause, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Track } from '../providers/types';
+import { useLibraryStore } from '../store/libraryStore';
 import { formatCount, formatDuration, handleArtworkError } from '../utils/format';
 import { GlassCard } from './GlassCard';
 
@@ -26,6 +27,9 @@ export function TrackCard({
   className = '',
 }: TrackCardProps) {
   const showPause = isActive && isPlaying;
+  const isLiked = useLibraryStore((s) => s.likedTracks.some((item) => item.id === track.id));
+  const toggleLike = useLibraryStore((s) => s.toggleLike);
+  const openPlaylistPicker = useLibraryStore((s) => s.openPlaylistPicker);
 
   return (
     <GlassCard
@@ -51,32 +55,61 @@ export function TrackCard({
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
         />
 
-        {(onPlayNext || onAddToQueue) && (
-          <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity duration-150">
-            {onPlayNext && (
-              <button
-                type="button"
-                onClick={() => onPlayNext(track)}
-                title="Грати наступним"
-                aria-label={`Грати наступним: ${track.title}`}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white border border-white/25 backdrop-blur-md hover:bg-[var(--accent)] transition-colors cursor-pointer"
-              >
-                <ListStart className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-            {onAddToQueue && (
-              <button
-                type="button"
-                onClick={() => onAddToQueue(track)}
-                title="Додати в чергу"
-                aria-label={`Додати в чергу: ${track.title}`}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white border border-white/25 backdrop-blur-md hover:bg-[var(--accent)] transition-colors cursor-pointer"
-              >
-                <ListPlus className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
+        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity duration-150">
+            <button
+              type="button"
+              onClick={() => toggleLike(track)}
+              aria-pressed={isLiked}
+              title={isLiked ? 'Прибрати з вподобаних' : 'Додати у вподобані'}
+              aria-label={isLiked ? `Прибрати лайк: ${track.title}` : `Вподобати: ${track.title}`}
+              className={`flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur-md transition-colors cursor-pointer ${
+                isLiked
+                  ? 'bg-[var(--accent)] border-white/40 text-[var(--accent-contrast)]'
+                  : 'bg-black/60 border-white/25 text-white hover:bg-[var(--accent)]'
+              }`}
+            >
+              <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} aria-hidden="true" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => openPlaylistPicker(track)}
+              title="Додати у плейлист"
+              aria-label={`Додати у плейлист: ${track.title}`}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white border border-white/25 backdrop-blur-md hover:bg-[var(--accent)] transition-colors cursor-pointer"
+            >
+              <FolderPlus className="h-4 w-4" aria-hidden="true" />
+            </button>
           </div>
-        )}
+
+          {(onPlayNext || onAddToQueue) && (
+            <div className="flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity duration-150">
+              {onPlayNext && (
+                <button
+                  type="button"
+                  onClick={() => onPlayNext(track)}
+                  title="Грати наступним"
+                  aria-label={`Грати наступним: ${track.title}`}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white border border-white/25 backdrop-blur-md hover:bg-[var(--accent)] transition-colors cursor-pointer"
+                >
+                  <ListStart className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
+              {onAddToQueue && (
+                <button
+                  type="button"
+                  onClick={() => onAddToQueue(track)}
+                  title="Додати в чергу"
+                  aria-label={`Додати в чергу: ${track.title}`}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white border border-white/25 backdrop-blur-md hover:bg-[var(--accent)] transition-colors cursor-pointer"
+                >
+                  <ListPlus className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         <div
           aria-hidden="true"
@@ -98,7 +131,7 @@ export function TrackCard({
                 : `Відтворити ${track.title} — ${track.artist}`
             }
             className={[
-              'flex h-11 w-11 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-lg border border-white/30 cursor-pointer',
+              'flex h-11 w-11 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] shadow-lg border border-white/30 cursor-pointer',
               'transition-all duration-200 hover:scale-105 active:scale-95',
               isActive
                 ? 'opacity-100 translate-y-0'

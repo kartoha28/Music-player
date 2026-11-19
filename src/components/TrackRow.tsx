@@ -1,7 +1,8 @@
-import { Headphones, ListPlus, ListStart, Pause, Play } from 'lucide-react';
+import { FolderPlus, Headphones, Heart, ListPlus, ListStart, Pause, Play } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { Track } from '../providers/types';
+import { useLibraryStore } from '../store/libraryStore';
 import { formatCount, formatDuration, handleArtworkError } from '../utils/format';
 
 export interface TrackRowProps {
@@ -33,6 +34,9 @@ export function TrackRow({
   actions,
 }: TrackRowProps) {
   const showPause = isActive && isPlaying;
+  const isLiked = useLibraryStore((s) => s.likedTracks.some((item) => item.id === track.id));
+  const toggleLike = useLibraryStore((s) => s.toggleLike);
+  const openPlaylistPicker = useLibraryStore((s) => s.openPlaylistPicker);
 
   return (
     <div
@@ -58,6 +62,7 @@ export function TrackRow({
         className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[var(--bg-elevated)] cursor-pointer border-0 p-0"
       >
         <img
+          key={track.id}
           src={track.artworkThumbnailUrl || track.artworkUrl}
           alt={`Обкладинка ${track.title}`}
           width={48}
@@ -120,21 +125,46 @@ export function TrackRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {track.playCount !== undefined && (
-          <span className="hidden md:inline-flex items-center gap-1 text-xs text-[var(--text-muted)] tabular-nums">
+          <span className="hidden lg:inline-flex items-center gap-1 text-xs text-[var(--text-muted)] tabular-nums mr-1">
             <Headphones className="h-3.5 w-3.5" aria-hidden="true" />
             {formatCount(track.playCount)}
           </span>
         )}
 
-        <span className="hidden sm:inline-flex rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
+        <span className="hidden md:inline-flex rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
           {SOURCE_LABELS[track.source]}
         </span>
 
-        <span className="text-xs font-medium text-[var(--text-secondary)] tabular-nums min-w-[2.5rem] text-right">
+        <span className="text-xs font-medium text-[var(--text-secondary)] tabular-nums min-w-[2.5rem] text-right mr-1">
           {formatDuration(track.duration)}
         </span>
+
+        <button
+          type="button"
+          onClick={() => toggleLike(track)}
+          aria-pressed={isLiked}
+          title={isLiked ? 'Прибрати з вподобаних' : 'Вподобати'}
+          aria-label={isLiked ? `Прибрати лайк: ${track.title}` : `Вподобати: ${track.title}`}
+          className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors cursor-pointer bg-transparent border-0 ${
+            isLiked
+              ? 'text-[var(--accent)]'
+              : 'text-[var(--text-secondary)] hover:bg-[var(--glass-bg)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} aria-hidden="true" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => openPlaylistPicker(track)}
+          title="Додати у плейлист"
+          aria-label={`Додати у плейлист: ${track.title}`}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--glass-bg)] hover:text-[var(--text-primary)] transition-colors cursor-pointer bg-transparent border-0"
+        >
+          <FolderPlus className="h-4 w-4" aria-hidden="true" />
+        </button>
 
         {onPlayNext && (
           <button
@@ -142,7 +172,7 @@ export function TrackRow({
             onClick={() => onPlayNext(track)}
             title="Грати наступним"
             aria-label={`Грати наступним: ${track.title}`}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--glass-bg)] hover:text-[var(--text-primary)] transition-colors cursor-pointer bg-transparent border-0"
+            className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--glass-bg)] hover:text-[var(--text-primary)] transition-colors cursor-pointer bg-transparent border-0"
           >
             <ListStart className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -154,7 +184,7 @@ export function TrackRow({
             onClick={() => onAddToQueue(track)}
             title="Додати в чергу"
             aria-label={`Додати в чергу: ${track.title}`}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--glass-bg)] hover:text-[var(--text-primary)] transition-colors cursor-pointer bg-transparent border-0"
+            className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--glass-bg)] hover:text-[var(--text-primary)] transition-colors cursor-pointer bg-transparent border-0"
           >
             <ListPlus className="h-4 w-4" aria-hidden="true" />
           </button>

@@ -3,6 +3,8 @@ import {
   AlertCircle,
   ChevronDown,
   ExternalLink,
+  FolderPlus,
+  Heart,
   ListMusic,
   Loader2,
   Maximize2,
@@ -23,7 +25,9 @@ import { useAudio } from '../hooks/useAudio';
 import { useDominantColor } from '../hooks/useDominantColor';
 import { useHotkeys } from '../hooks/useHotkeys';
 import { useMediaSession } from '../hooks/useMediaSession';
+import { useLibraryStore } from '../store/libraryStore';
 import { selectCurrentTrack, usePlayerStore, type RepeatMode } from '../store/playerStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { FALLBACK_ARTWORK_SVG, formatDuration, handleArtworkError } from '../utils/format';
 import { GlassButton } from './GlassButton';
 import { QueuePanel } from './QueuePanel';
@@ -72,12 +76,18 @@ export function Player() {
   const cycleRepeatMode = usePlayerStore((s) => s.cycleRepeatMode);
   const toggleQueue = usePlayerStore((s) => s.toggleQueue);
   const setExpanded = usePlayerStore((s) => s.setExpanded);
+  const dynamicBackground = useSettingsStore((s) => s.dynamicBackground);
+  const isCurrentLiked = useLibraryStore((s) =>
+    currentTrack ? s.likedTracks.some((item) => item.id === currentTrack.id) : false,
+  );
+  const toggleLike = useLibraryStore((s) => s.toggleLike);
+  const openPlaylistPicker = useLibraryStore((s) => s.openPlaylistPicker);
 
   useDominantColor(
     currentTrack?.artworkThumbnailUrl || currentTrack?.artworkUrl,
     currentTrack?.artworkMirrors,
     currentTrack?.id,
-    true,
+    dynamicBackground,
   );
 
   const pushedOverlayRef = useRef(false);
@@ -353,8 +363,35 @@ export function Player() {
           </div>
         </div>
 
-        {/* Праворуч: черга, гучність, розгортання */}
-        <div className="flex items-center justify-end gap-2">
+        {/* Праворуч: лайк, черга, гучність, розгортання */}
+        <div className="flex items-center justify-end gap-1.5">
+          {currentTrack && (
+            <>
+              <GlassButton
+                variant="ghost"
+                size="icon"
+                className={`h-9 w-9 ${isCurrentLiked ? 'text-[var(--accent)]' : ''}`}
+                onClick={() => toggleLike(currentTrack)}
+                aria-pressed={isCurrentLiked}
+                aria-label={isCurrentLiked ? 'Прибрати з вподобаних' : 'Вподобати трек'}
+                title={isCurrentLiked ? 'Прибрати з вподобаних' : 'Вподобати трек'}
+              >
+                <Heart className={`h-4 w-4 ${isCurrentLiked ? 'fill-current' : ''}`} aria-hidden="true" />
+              </GlassButton>
+
+              <GlassButton
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => openPlaylistPicker(currentTrack)}
+                aria-label="Додати трек у плейлист"
+                title="Додати у плейлист"
+              >
+                <FolderPlus className="h-4 w-4" aria-hidden="true" />
+              </GlassButton>
+            </>
+          )}
+
           <GlassButton
             variant={isQueueOpen ? 'primary' : 'glass'}
             size="sm"
@@ -699,19 +736,45 @@ export function Player() {
                   />
                 </div>
 
-                {currentTrack.permalinkUrl && (
-                  <a
-                    href={currentTrack.permalinkUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="no-underline"
+                <div className="flex items-center gap-2">
+                  <GlassButton
+                    variant="glass"
+                    size="icon"
+                    className={`h-9 w-9 ${isCurrentLiked ? 'text-[var(--accent)]' : ''}`}
+                    onClick={() => toggleLike(currentTrack)}
+                    aria-pressed={isCurrentLiked}
+                    aria-label={isCurrentLiked ? 'Прибрати з вподобаних' : 'Вподобати трек'}
                   >
-                    <GlassButton variant="glass" size="sm">
-                      <span>Відкрити оригінал</span>
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                    </GlassButton>
-                  </a>
-                )}
+                    <Heart
+                      className={`h-4 w-4 ${isCurrentLiked ? 'fill-current' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </GlassButton>
+
+                  <GlassButton
+                    variant="glass"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => openPlaylistPicker(currentTrack)}
+                    aria-label="Додати трек у плейлист"
+                  >
+                    <FolderPlus className="h-4 w-4" aria-hidden="true" />
+                  </GlassButton>
+
+                  {currentTrack.permalinkUrl && (
+                    <a
+                      href={currentTrack.permalinkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="no-underline"
+                    >
+                      <GlassButton variant="glass" size="sm">
+                        <span>Відкрити оригінал</span>
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                      </GlassButton>
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </motion.div>
